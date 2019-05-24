@@ -6,12 +6,64 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdbool.h>
+#include <signal.h>
 
-#define SERV_PORT 10050
-#define BUFSIZE 100
+#include <getopt.h>
+	
 #define SADDR struct sockaddr
 
-int main() {
+int main(int argc, char **argv) {
+
+  int BUFSIZE = -1;
+  int SERV_PORT = -1;
+
+  while (true) {
+    int current_optind = optind ? optind : 1;
+
+    static struct option options[] = {{"bufsize", required_argument, 0, 0},
+                                      {"port", required_argument, 0, 0},
+                                      {0, 0, 0, 0}};
+
+    int option_index = 0;
+    int c = getopt_long(argc, argv, "",options, &option_index);
+
+    if (c == -1) break;
+
+    switch (c) {
+      case 0:
+        switch (option_index) {
+          case 0:
+            BUFSIZE = atoi(optarg);
+            if (BUFSIZE <= 0) {
+                printf("BUFSIZE must be a positive number\n");
+                return 1;
+              }
+            break;
+
+            case 1:
+            SERV_PORT = atoi(optarg);
+            if (SERV_PORT <= 0) {
+                printf("PORT must be a positive number\n");
+                return 1;
+              }
+            break;
+        }
+
+      case '?':
+        break;
+
+      default:
+        printf("getopt returned character code 0%o?\n", c);
+    }
+
+  }
+  if (BUFSIZE == -1 || SERV_PORT == -1) {
+    printf("Usage: %s --bufsize \"buffer_size\" --port \"port\"\n",
+           argv[0]);
+    return 1;
+  }  
+
   const size_t kSize = sizeof(struct sockaddr_in);
 
   int lfd, cfd;
@@ -34,6 +86,7 @@ int main() {
     perror("bind");
     exit(1);
   }
+  printf("SERVER starts...\n");
 
   if (listen(lfd, 5) < 0) {
     perror("listen");
